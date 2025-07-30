@@ -14,16 +14,10 @@ The repository includes:
 
     XGB.ipynb
         End-to-end workflow for training and evaluating XGBoost models, with:
-
         Train-test split 
-
-
         AUC and ROC plotting
-
         SHAP-based feature importance and summary plots.
-
         Pairwise AUC comparison using permutation tests.
-
     utils/ (optional)
     For helper scripts such as plotting ROC curves, computing calibration metrics, or formatting datasets. (You can modularize the code from XGB.ipynb here.)
 
@@ -33,25 +27,16 @@ The repository includes:
 ⚙️ Installation & Setup
 1. Clone the Repo
 
-git clone https://github.com/YOUR_USERNAME/mace-prediction.git
+git clone https://github.com/AmirGhaffari96/PCI_outcome_predict.git
 cd mace-prediction
-
 2. Install Requirements
-
 pip install -r requirements.txt
-
 Key packages:
-
     xgboost
-
     scikit-learn
-
     shap
-
     matplotlib
-
     numpy, pandas
-
     scipy
 
 🧩 Running the Code
