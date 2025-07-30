@@ -81,10 +81,10 @@ The dataset used in this study contains anonymized clinical, laboratory, and pro
 - SHAP values for feature interpretability
 
 ## 📄 License
-MIT License. See `LICENSE` for details.
+No need to License
 
 ## 📬 Contact
 For questions or collaborations, contact:
 **[Your Name]**  
-Email: [your-email@example.com]  
-Institution: [Your Institution]
+Email: [ghaffari.amr@gmail.com]  
+Institution: Rajaie Cardiovascular Institue / Tehran Heart Center 
