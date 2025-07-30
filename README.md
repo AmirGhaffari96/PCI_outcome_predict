@@ -15,8 +15,8 @@ This repository contains the source code and workflows for our study applying ma
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/PCI-MACE-ML.git
-cd PCI-MACE-ML
+git clone https://github.com/AmirGhaffari96/PCI_outcome_predict.git
+cd PCI_outcome_predict
 ```
 
 ### 2. Install requirements
