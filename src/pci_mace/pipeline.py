@@ -17,12 +17,14 @@ import pandas as pd
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator
+from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
+    brier_score_loss,
     confusion_matrix,
     f1_score,
     precision_score,
@@ -112,7 +114,7 @@ def model_specs(random_state: int) -> dict[str, ModelSpec]:
             },
         ),
         "logistic_regression": ModelSpec(
-            LogisticRegression(max_iter=1000, solver="lbfgs", penalty="l2"),
+            LogisticRegression(max_iter=1000, solver="lbfgs"),
             {"model__C": [0.1, 1.0, 10.0]},
         ),
         "neural_network": ModelSpec(
@@ -129,8 +131,13 @@ def model_specs(random_state: int) -> dict[str, ModelSpec]:
             },
         ),
         "svm": ModelSpec(
-            SVC(kernel="linear", probability=True, random_state=random_state),
-            {"model__C": [0.1, 1.0, 10.0]},
+            CalibratedClassifierCV(
+                estimator=SVC(kernel="linear"),
+                method="sigmoid",
+                cv=5,
+                ensemble=False,
+            ),
+            {"model__estimator__C": [0.1, 1.0, 10.0]},
         ),
         "naive_bayes": ModelSpec(
             GaussianNB(),
@@ -221,12 +228,19 @@ def _evaluate(
     y_test: pd.Series,
     bootstrap_iterations: int,
     random_state: int,
-) -> tuple[dict[str, Any], tuple[np.ndarray, np.ndarray]]:
+) -> tuple[
+    dict[str, Any],
+    tuple[np.ndarray, np.ndarray],
+    tuple[np.ndarray, np.ndarray],
+]:
     probabilities = estimator.predict_proba(x_test)[:, 1]
     predictions = (probabilities >= 0.5).astype(int)
     tn, fp, fn, _tp = confusion_matrix(y_test, predictions, labels=[0, 1]).ravel()
     specificity = tn / (tn + fp) if (tn + fp) else float("nan")
     npv = tn / (tn + fn) if (tn + fn) else float("nan")
+    sensitivity = recall_score(y_test, predictions, zero_division=0)
+    lr_positive = sensitivity / (1 - specificity) if specificity < 1 else float("inf")
+    lr_negative = (1 - sensitivity) / specificity if specificity > 0 else float("inf")
     auc = roc_auc_score(y_test, probabilities)
     low, high = _bootstrap_auc(
         y_test.to_numpy(), probabilities, bootstrap_iterations, random_state
@@ -239,15 +253,24 @@ def _evaluate(
         "auc_ci_high": high,
         "accuracy": accuracy_score(y_test, predictions),
         "balanced_accuracy": balanced_accuracy_score(y_test, predictions),
-        "sensitivity": recall_score(y_test, predictions, zero_division=0),
+        "sensitivity": sensitivity,
         "specificity": specificity,
         "precision_ppv": precision_score(y_test, predictions, zero_division=0),
         "npv": npv,
         "f1": f1_score(y_test, predictions, zero_division=0),
+        "brier_score": brier_score_loss(y_test, probabilities),
+        "lr_positive": lr_positive,
+        "lr_negative": lr_negative,
         "test_n": len(y_test),
         "test_events": int(y_test.sum()),
     }
-    return row, (fpr, tpr)
+    calibration_true, calibration_predicted = calibration_curve(
+        y_test,
+        probabilities,
+        n_bins=10,
+        strategy="quantile",
+    )
+    return row, (fpr, tpr), (calibration_predicted, calibration_true)
 
 
 def _plot_roc(curves: dict[str, tuple[np.ndarray, np.ndarray]], metrics: pd.DataFrame, path: Path) -> None:
@@ -260,6 +283,37 @@ def _plot_roc(curves: dict[str, tuple[np.ndarray, np.ndarray]], metrics: pd.Data
     ax.set(xlabel="False positive rate", ylabel="True positive rate", title="ROC curves on untouched test data")
     ax.grid(alpha=0.2)
     ax.legend(loc="lower right", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
+def _plot_calibration(
+    curves: dict[str, tuple[np.ndarray, np.ndarray]],
+    metrics: pd.DataFrame,
+    path: Path,
+) -> None:
+    brier_by_name = dict(zip(metrics["model"], metrics["brier_score"]))
+    fig, ax = plt.subplots(figsize=(9, 7))
+    ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfect calibration")
+    for name, (mean_predicted, fraction_positive) in curves.items():
+        display = DISPLAY_NAMES[name]
+        ax.plot(
+            mean_predicted,
+            fraction_positive,
+            marker="o",
+            linewidth=1.5,
+            label=f"{display} (Brier={brier_by_name[display]:.3f})",
+        )
+    ax.set(
+        xlabel="Mean predicted probability",
+        ylabel="Observed event fraction",
+        title="Calibration on untouched test data",
+        xlim=(0, 1),
+        ylim=(0, 1),
+    )
+    ax.grid(alpha=0.2)
+    ax.legend(loc="upper left", fontsize=8)
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)
@@ -331,6 +385,7 @@ def run_benchmark(
     splitter = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
     rows: list[dict[str, Any]] = []
     curves: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    calibration_curves: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     fitted: dict[str, Pipeline] = {}
     best_params: dict[str, dict[str, Any]] = {}
 
@@ -352,7 +407,7 @@ def run_benchmark(
         else:
             estimator = pipeline.fit(x_train, y_train)
             best_params[name] = {}
-        row, curve = _evaluate(
+        row, curve, calibration = _evaluate(
             name,
             estimator,
             x_test,
@@ -362,11 +417,17 @@ def run_benchmark(
         )
         rows.append(row)
         curves[name] = curve
+        calibration_curves[name] = calibration
         fitted[name] = estimator
 
     metrics = pd.DataFrame(rows).sort_values("auc", ascending=False).reset_index(drop=True)
     metrics.to_csv(output_dir / "metrics.csv", index=False)
     _plot_roc(curves, metrics, output_dir / "roc-curves.png")
+    _plot_calibration(
+        calibration_curves,
+        metrics,
+        output_dir / "calibration-curves.png",
+    )
     metadata = {
         "data": str(Path(data_path).resolve()),
         "features": list(DEFAULT_FEATURES),

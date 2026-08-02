@@ -26,6 +26,8 @@ def test_decision_tree_smoke_run(tmp_path: Path) -> None:
     assert 0 <= metrics.loc[0, "auc"] <= 1
     assert (output_path / "metrics.csv").exists()
     assert (output_path / "roc-curves.png").exists()
+    assert (output_path / "calibration-curves.png").exists()
     assert (output_path / "run-metadata.json").exists()
     persisted = pd.read_csv(output_path / "metrics.csv")
     assert len(persisted) == 1
+    assert {"brier_score", "lr_positive", "lr_negative"} <= set(persisted.columns)
