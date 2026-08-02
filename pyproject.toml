@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pci-mace"
+version = "1.0.0"
+description = "Reproducible ML pipeline for one-year MACE prediction after PCI in elderly patients"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "imbalanced-learn>=0.12",
+  "matplotlib>=3.8",
+  "numpy>=1.26",
+  "openpyxl>=3.1",
+  "pandas>=2.1",
+  "scikit-learn>=1.4",
+  "shap>=0.45",
+  "xgboost>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+pci-mace = "pci_mace.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

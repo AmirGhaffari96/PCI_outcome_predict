@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the associated article."
+title: "Applied machine learning to predict 1-year major adverse cardiovascular events in elderly patients after percutaneous coronary intervention"
+type: article
+authors:
+  - family-names: Jolfayi
+    given-names: Amir Ghaffari
+  - family-names: Nasrollahizadeh
+    given-names: Amir
+  - family-names: Nasrollahizadeh
+    given-names: Ali
+  - family-names: Pishraft-Sabet
+    given-names: Homayoun
+  - family-names: Azimi
+    given-names: Amir
+  - family-names: Jenab
+    given-names: Yaser
+  - family-names: Mehrani
+    given-names: Mehdi
+  - family-names: Hosseini
+    given-names: Kaveh
+  - family-names: Soleimani
+    given-names: Hamidreza
+journal: "BMC Medical Informatics and Decision Making"
+volume: 25
+year: 2025
+doi: "10.1186/s12911-025-03238-7"
+url: "https://doi.org/10.1186/s12911-025-03238-7"
