@@ -85,6 +85,5 @@ No need to License
 
 ## 📬 Contact
 For questions or collaborations, contact:
-**[Your Name]**  
+**Amir Ghaffari, MD, MPH, Msc**  
 Email: [ghaffari.amr@gmail.com]  
-Institution: Rajaie Cardiovascular Institue / Tehran Heart Center 
