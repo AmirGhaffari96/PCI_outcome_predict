@@ -201,6 +201,13 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Local clinical datasets and generated analysis artifacts
+data/*.csv
+data/*.xls
+data/*.xlsx
+!data/README.md
+outputs/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
